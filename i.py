@@ -159,7 +159,7 @@ def ex3():
                  [-G2,    G2]])
 
   C = np.array( [[C1,-C1*K],
-                 [0,C2]])
+                 [0,  C2]])
 
   W = np.array( [G1,0])
 
