@@ -3,35 +3,13 @@ import scipy.linalg as la
 from scipy.sparse import csc_matrix, linalg as sla
 import scipy.sparse.linalg as spla
 
+from perm import cycle_parity
+
 from scipy.fft import ifft, fft
 from itertools import accumulate
 
 def gen_points( n):
   return [ np.exp( np.pi*2*k/n*1j) for k in range(n)]
-
-def toCycles( a):
-  done = set()
-
-  def find_cycle( idx):
-    incycle = [idx] 
-    incycle_set = set([idx])
-    while a[idx] not in incycle_set:
-      idx = a[idx]
-      incycle.append( idx)
-      incycle_set = incycle_set.union([idx])
-    return incycle, incycle_set
-
-  result = []
-  for i in range( len(a)):
-    if i not in done:
-      incycle, incycle_set = find_cycle( i)
-      done = done.union( incycle_set)
-      result.append( incycle)
-  return result
-
-def cycle_parity( a):
-  cs = toCycles( a)
-  return [1,-1][sum( len(c)-1 for c in cs) % 2]
 
 def interpolate( G, C, W, d, n):
   GG = csc_matrix( G)
