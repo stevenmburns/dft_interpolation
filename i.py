@@ -72,11 +72,6 @@ def second_order_system( wo=1, Q=10):
   G, C, W, d = companion_matrix( a)
   return G, C, W, d, 3
 
-def run( G, C, W, d, n=2, fS=1.0):
-  GG = csc_matrix( G)
-  CC = csc_matrix( C)
-  run_sparse( GG, CC, W, d, n, fS)
-
 def reduce_poly( c):
   first_non_zero = None
   for idx in range( len(c)-1, -1, -1):
@@ -88,6 +83,10 @@ def reduce_poly( c):
   else:
     return c
 
+def run( G, C, W, d, n=2, fS=1.0):
+  GG = csc_matrix( G)
+  CC = csc_matrix( C)
+  run_sparse( GG, CC, W, d, n, fS)
 
 def run_sparse( GG, CC, W, d, n=2, fS=1.0):
   print( "="*40)
