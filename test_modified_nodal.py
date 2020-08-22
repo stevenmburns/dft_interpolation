@@ -1,7 +1,7 @@
 
 import numpy as np
 from modified_nodal import ModifiedNodal
-from i import run_sparse
+from interpolate import run_sparse
 
 def test_A():
     mn = ModifiedNodal()

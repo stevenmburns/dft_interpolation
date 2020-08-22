@@ -1,4 +1,4 @@
-from i import reduce_poly
+from interpolate import reduce_poly
 
 def test_A():
     assert reduce_poly( [1, 0, 1]) == [1,0,1]

@@ -1,6 +1,6 @@
 import numpy as np
 
-from i import run, second_order_system
+from interpolate import run, second_order_system
 
 def test_ex1():
   G = np.array( [[1,0],

@@ -2,7 +2,6 @@
 from perm import toCycles, cycle_parity
 import itertools
 
-
 def testA():
     a = [1,0]
     result = toCycles( a)
