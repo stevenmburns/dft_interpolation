@@ -255,3 +255,6 @@ class ModifiedNodal:
     def solve_adjoint(self):
         self.Xa = self.lu.solve(-self.d,trans='T')
         return self.Xa
+
+    def phi(self):
+        return self.d.T.dot(self.X)
