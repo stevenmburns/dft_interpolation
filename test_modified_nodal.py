@@ -225,3 +225,42 @@ def test_ex_6_5_1():
     assert np.isclose(mn.abs_sens(d_V2_by_d_L), 22*np.sqrt(320)/400)
     assert np.isclose(mn.abs_sens_dbs(d_V2_by_d_L), 20*np.log10(np.e)*22/20)
     assert np.isclose(mn.phase_sens(d_V2_by_d_L), -6/20)
+
+def test_ex_6_5_2():
+    "page 186"
+    mn = ModifiedNodal()
+    J = 1
+    G1 = 4
+    C = 1
+    G2 = 1
+    L = 1
+    g = 3
+    omega = 1
+
+    mn.add(CurrentSourceElement(0, 1, J))
+    mn.add(ConductanceElement(1, 0, G1))
+    mn.add(CapacitanceElement(1, 0, C))
+    mn.add(ConductanceElement(1, 2, G2))
+    mn.add(InductanceElement(2, 0, L))
+    mn.add(VCTElement(1, 0, 0, 2, g))
+
+    mn.semantic(2)
+    mn.factor(s=omega*1j)
+    mn.solve()
+
+    mn.solve_adjoint()
+    #print(mn.G, mn.C, mn.W, mn.d, mn.X, mn.Xa)
+    assert np.isclose(mn.phi(), (8+16j)/20)
+    d_V2_by_d_C = mn.elements[2].sens(mn)
+    d_V2_by_d_L = mn.elements[4].sens(mn)
+
+    d_V2_by_d_omega = 1/omega * ( C*d_V2_by_d_C + L*d_V2_by_d_L)
+    assert np.isclose(d_V2_by_d_omega, (384+288j)/400)
+
+    d_V2_by_d_omega2 = mn.sens_to_omega()
+    print( f"d_V2_by_d_omega{{,2}}: {d_V2_by_d_omega} {d_V2_by_d_omega2}")
+    assert np.isclose(d_V2_by_d_omega, (384+288j)/400)
+
+    assert np.isclose(mn.abs_sens(d_V2_by_d_omega), 24*np.sqrt(320)/400)
+    assert np.isclose(mn.abs_sens_dbs(d_V2_by_d_omega), 20*np.log10(np.e)*24/20)
+    assert np.isclose(mn.phase_sens(d_V2_by_d_omega), -12/20)

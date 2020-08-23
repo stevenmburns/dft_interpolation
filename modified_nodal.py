@@ -353,5 +353,8 @@ class ModifiedNodal:
     def abs_sens_dbs(self, sens):
         return 20*np.log10(np.e)*self.abs_sens_napiers(sens)
 
+    def sens_to_omega(self):
+        return 1j*self.Xa.T.dot(self.C.dot(self.X))
+
     def sensitivities(self):
         return [el.sens(self) for el in self.elements]
