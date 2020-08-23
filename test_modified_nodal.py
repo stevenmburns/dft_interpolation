@@ -10,6 +10,9 @@ def test_Conductance():
     mn.factor( s=1)
     mn.solve()
     assert np.isclose( mn.phi(), 0.5)
+    # I=GV; V=I/G; V=IG^-1; V'=-IG^-2=-0.25
+    mn.solve_adjoint()
+    assert np.isclose( mn.elements[0].sens(mn), -0.25)
 
 def test_Resistance():
     mn = ModifiedNodal()
@@ -19,6 +22,9 @@ def test_Resistance():
     mn.factor( s=1)
     mn.solve()
     assert np.isclose( mn.phi(), 2.0)
+    #  V=IR; V'=I=1
+    mn.solve_adjoint()
+    assert np.isclose( mn.elements[0].sens(mn), 1)
 
 def test_Capacitance():
     mn = ModifiedNodal()
@@ -28,6 +34,9 @@ def test_Capacitance():
     mn.factor( s=1)
     mn.solve()
     assert np.isclose( mn.phi(), 0.5)
+    # I=CsV; V=I/(Cs); V=(I/s) C^-1; V'=-(I/s) C^-2=-0.25
+    mn.solve_adjoint()
+    assert np.isclose( mn.elements[0].sens(mn), -0.25)
 
 def test_Inductance():
     mn = ModifiedNodal()
@@ -37,6 +46,9 @@ def test_Inductance():
     mn.factor( s=1)
     mn.solve()
     assert np.isclose( mn.phi(), 2.0)
+    # V=IsL; V'=(Is)=1
+    mn.solve_adjoint()
+    assert np.isclose( mn.elements[0].sens(mn), 1)
 
 def test_Impedance():
     mn = ModifiedNodal()
@@ -46,6 +58,9 @@ def test_Impedance():
     mn.factor( s=1)
     mn.solve()
     assert np.isclose( mn.phi(), 5.0)
+    # V=IZ; V'=I=1
+    mn.solve_adjoint()
+    assert np.isclose( mn.elements[0].sens(mn), 1)
 
 def test_CurrentSource():
     mn = ModifiedNodal()

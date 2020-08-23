@@ -6,6 +6,10 @@ class Element:
     def __init__(self):
         pass
 
+    def sens(self, mn):
+        print("Sensitivity not implemented...")
+        return 0.0
+
 class TwoTerminalElement(Element):
     def __init__(self,i,j,extra_row_cols=0):
         self.i = i
@@ -42,6 +46,10 @@ class ResistanceElement(TwoTerminalElement):
         mn.assign_G(None,None, -self.r)
         mn.incr_cursor()   
 
+    def sens(self, mn):
+        return -mn.Xa[self.cursor]*mn.X[self.cursor]
+        
+
 class InductanceElement(TwoTerminalElement):
     def __init__(self,i,j,l):
         self.l = l
@@ -55,6 +63,10 @@ class InductanceElement(TwoTerminalElement):
         mn.assign_G(None,self.j,-1)
         mn.assign_C(None,None, -self.l)
         mn.incr_cursor()   
+
+    def sens(self, mn):
+        return -mn.Xa[self.cursor]*mn.X[self.cursor]
+
 
 class ImpedanceElement(TwoTerminalElement):
     def __init__(self,i,j,*,r,l):
@@ -72,6 +84,10 @@ class ImpedanceElement(TwoTerminalElement):
         mn.assign_C(None,None, -self.l)
         mn.incr_cursor()   
 
+    def sens(self, mn):
+        return -mn.Xa[self.cursor]*mn.X[self.cursor]
+
+
 class ConductanceElement(TwoTerminalElement):
     def __init__(self,i,j,g):
         self.g = g
@@ -82,6 +98,18 @@ class ConductanceElement(TwoTerminalElement):
         mn.update_G(self.j,self.j, self.g)
         mn.update_G(self.i,self.j,-self.g)
         mn.update_G(self.j,self.i,-self.g)
+
+    def sens(self, mn):
+        result = 0
+        if self.i > 0:
+            result += mn.Xa[self.i-1]*mn.X[self.i-1]
+        if self.j > 0:
+            result += mn.Xa[self.j-1]*mn.X[self.j-1]
+        if self.i > 0 and self.j > 0:
+            result -= mn.Xa[self.i-1]*mn.X[self.j-1]
+            result -= mn.Xa[self.j-1]*mn.X[self.i-1]
+        return result
+
 
 class CapacitanceElement(TwoTerminalElement):
     def __init__(self,i,j,c):
@@ -94,6 +122,17 @@ class CapacitanceElement(TwoTerminalElement):
         mn.update_C(self.i,self.j,-self.c)
         mn.update_C(self.j,self.i,-self.c)
 
+    def sens(self, mn):
+        result = 0
+        if self.i > 0:
+            result += mn.Xa[self.i-1]*mn.X[self.i-1]
+        if self.j > 0:
+            result += mn.Xa[self.j-1]*mn.X[self.j-1]
+        if self.i > 0 and self.j > 0:
+            result -= mn.Xa[self.i-1]*mn.X[self.j-1]
+            result -= mn.Xa[self.j-1]*mn.X[self.i-1]
+        return result
+
 class CurrentSourceElement(TwoTerminalElement):
     def __init__(self,i,j,J):
         self.J = J
@@ -102,6 +141,7 @@ class CurrentSourceElement(TwoTerminalElement):
     def update(self, mn):
         mn.update_W(self.i, -self.J)
         mn.update_W(self.j,  self.J)
+
 
 class VoltageSourceElement(TwoTerminalElement):
     def __init__(self,i,j,E):
@@ -258,3 +298,7 @@ class ModifiedNodal:
 
     def phi(self):
         return self.d.T.dot(self.X)
+
+    def sensitivities(self):
+        for el in self.elements:
+            print( el.sens(self))
