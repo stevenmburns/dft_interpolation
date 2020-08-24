@@ -254,13 +254,46 @@ def test_ex_6_5_2():
     d_V2_by_d_C = mn.elements[2].sens(mn)
     d_V2_by_d_L = mn.elements[4].sens(mn)
 
-    d_V2_by_d_omega = 1/omega * ( C*d_V2_by_d_C + L*d_V2_by_d_L)
+    d_V2_by_d_omega = mn.sens_to_omega()
     assert np.isclose(d_V2_by_d_omega, (384+288j)/400)
 
-    d_V2_by_d_omega2 = mn.sens_to_omega()
+    d_V2_by_d_omega2 = 1/omega * ( C*d_V2_by_d_C + L*d_V2_by_d_L)
+    assert np.isclose(d_V2_by_d_omega2, (384+288j)/400)
     print( f"d_V2_by_d_omega{{,2}}: {d_V2_by_d_omega} {d_V2_by_d_omega2}")
-    assert np.isclose(d_V2_by_d_omega, (384+288j)/400)
+
 
     assert np.isclose(mn.abs_sens(d_V2_by_d_omega), 24*np.sqrt(320)/400)
-    assert np.isclose(mn.abs_sens_dbs(d_V2_by_d_omega), 20*np.log10(np.e)*24/20)
+    assert np.isclose(mn.abs_sens_dbs(d_V2_by_d_omega), mn.factor_napiers_to_dbs*24/20)
     assert np.isclose(mn.phase_sens(d_V2_by_d_omega), -12/20)
+
+def test_one_pole():
+    mn = ModifiedNodal()
+    E = 1
+    G = 1
+    C = 1
+    omega = 8
+
+    mn.add(VoltageSourceElement(1, 0, E))
+    mn.add(ConductanceElement(1, 2, G))
+    mn.add(CapacitanceElement(2, 0, C))
+
+    mn.semantic(2)
+    mn.factor(s=omega*1j)
+    mn.solve()
+
+    print( mn.X)
+
+    # 1/sqrt(1+omega^2)
+    assert np.isclose(np.abs(mn.phi()), 1/np.sqrt(1+omega**2))
+
+    mn.solve_adjoint()
+    d_V2_by_d_omega = mn.sens_to_omega()
+
+    assert np.isclose(mn.abs_sens(d_V2_by_d_omega), -omega*(1+omega**2)**(-3/2))
+    # -1/2*log(1+omega^2)
+    # -1/2*1/(1+omega^2)*2*omega
+    assert np.isclose(mn.abs_sens_napiers(d_V2_by_d_omega), -omega/(1+omega**2))
+    assert np.isclose(mn.abs_sens_dbs(d_V2_by_d_omega), -mn.factor_napiers_to_dbs*omega/(1+omega**2))
+
+    assert np.isclose(mn.sens_to_log10(mn.abs_sens_dbs(d_V2_by_d_omega), omega), -20, atol=0.5)
+    

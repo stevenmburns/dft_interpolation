@@ -236,6 +236,9 @@ class OpAmpElement(FourTerminalElement):
 
 
 class ModifiedNodal:
+    #factor_napiers_to_dbs = 20*np.log10(np.e)
+    factor_napiers_to_dbs = 20/np.log(10)
+
     def __init__(self):
         self.elements = []
 
@@ -351,10 +354,16 @@ class ModifiedNodal:
         return (sens/self.phi()).real
 
     def abs_sens_dbs(self, sens):
-        return 20*np.log10(np.e)*self.abs_sens_napiers(sens)
+        return self.factor_napiers_to_dbs*self.abs_sens_napiers(sens)
 
     def sens_to_omega(self):
         return 1j*self.Xa.T.dot(self.C.dot(self.X))
+
+    def sens_to_log(self, sens, x):
+        return sens*x
+
+    def sens_to_log10(self, sens, x):
+        return sens*x*np.log(10)
 
     def sensitivities(self):
         return [el.sens(self) for el in self.elements]
