@@ -31,41 +31,49 @@ def test_Resistance():
 
 def test_Capacitance():
     mn = ModifiedNodal()
-    mn.add(CapacitanceElement(1, 0, 2))
+    omega = 1
+    C = 2
+    mn.add(CapacitanceElement(1, 0, C))
     mn.semantic(1)
     mn.W[0] = 1
-    mn.factor(s=1)
+    mn.factor(s=1j*omega)
     mn.solve()
-    assert np.isclose(mn.phi(), 0.5)
+    assert np.isclose(mn.phi(), 1/(C*mn.s))
     # I=CsV; V=I/(Cs); V=(I/s) C^-1; V'=-(I/s) C^-2=-0.25
     mn.solve_adjoint()
-    assert np.isclose(mn.elements[0].sens(mn), -0.25)
+    assert np.isclose(mn.elements[0].sens(mn), -1/(C**2*mn.s))
 
 
 def test_Inductance():
     mn = ModifiedNodal()
-    mn.add(InductanceElement(1, 0, 2))
+    omega = 3
+    L = 2
+    mn.add(InductanceElement(1, 0, L))
     mn.semantic(1)
     mn.W[0] = 1
-    mn.factor(s=1)
+    mn.factor(s=1j*omega)
     mn.solve()
-    assert np.isclose(mn.phi(), 2.0)
-    # V=IsL; V'=(Is)=1
+    assert np.isclose(mn.phi(), L*mn.s)
+    # V=IsL; V'=(Is)=s
     mn.solve_adjoint()
-    assert np.isclose(mn.elements[0].sens(mn), 1)
+    assert np.isclose(mn.elements[0].sens(mn), mn.s)
 
 
 def test_Impedance():
     mn = ModifiedNodal()
-    mn.add(ImpedanceElement(1, 0, r=2, l=3))
+    omega = 2
+    R = 2
+    L = 3
+    mn.add(ImpedanceElement(1, 0, r=R, l=L))
     mn.semantic(1)
     mn.W[0] = 1
-    mn.factor(s=1)
+    mn.factor(s=1j*omega)
     mn.solve()
-    assert np.isclose(mn.phi(), 5.0)
+    assert np.isclose(mn.phi(), R + L*mn.s)
     # V=IZ; V'=I=1
     mn.solve_adjoint()
-    assert np.isclose(mn.elements[0].sens(mn), 1)
+    assert np.isclose(mn.elements[0].sens(mn,'r'), 1)
+    assert np.isclose(mn.elements[0].sens(mn,'l'), mn.s)
 
 
 def test_CurrentSource():
@@ -141,6 +149,49 @@ def test_OpAmp():
     mn.solve()
     assert np.isclose(mn.phi(), -G1/G2)
 
+
+def test_IdealTransformer():
+    mn = ModifiedNodal()
+    n = 4.5
+    mn.add(VoltageSourceElement(1, 0, 1))
+    mn.add(IdealTransformerElement(2, 0, 3, 0, n))
+    mn.add(ConductanceElement(1, 2, 1))
+    mn.add(ConductanceElement(3, 0, 1))
+    mn.semantic(3)
+    mn.factor(s=1)
+    mn.solve()
+    mn.solve_adjoint()
+
+    print(mn.phi())
+    # n * (n*n+1)^-1
+    # (n*n+1)^-1 - n * (n*n+1)^-2 * 2 * n
+    assert np.isclose( mn.phi(), n/(n*n+1))
+    assert np.isclose( mn.elements[1].sens(mn), mn.phi()/n - 2*mn.phi()**2)
+
+def test_Transformer():
+    mn = ModifiedNodal()
+    omega = 1
+    R1 = 1
+    R2 = 1
+    L1 = 1
+    L2 = 4
+    M = np.sqrt(L1*L2)
+    mn.add(VoltageSourceElement(1, 0, 1))
+    mn.add(TransformerElement(2, 0, 3, 0, l1=L1, l2=L2, m=M))
+    mn.add(ConductanceElement(1, 2, 1/R1))
+    mn.add(ConductanceElement(3, 0, 1/R2))
+    mn.semantic(3)
+    mn.factor(s=1j*omega)
+    mn.solve()
+    mn.solve_adjoint()
+
+    print(mn.phi())
+    #Z = R1 + 1j*omega*L1 - (1j*omega*M)**2/(R2 + 1j*omega*L2)
+    phi = mn.s*M*R2/((mn.s*M)**2 + (R1+mn.s*L1) * (R2-mn.s*L2))
+
+    assert np.isclose( mn.phi(), phi)
+    
+#    assert np.isclose( mn.elements[1].sens(mn), mn.phi()/n - 2*mn.phi()**2)
 
 def test_ex_6_1_1():
     "page 174"
@@ -296,4 +347,42 @@ def test_one_pole():
     assert np.isclose(mn.abs_sens_dbs(d_V2_by_d_omega), -mn.factor_napiers_to_dbs*omega/(1+omega**2))
 
     assert np.isclose(mn.sens_to_log10(mn.abs_sens_dbs(d_V2_by_d_omega), omega), -20, atol=0.5)
-    
+
+
+
+def test_bott_duffin():
+    mn = ModifiedNodal()
+
+    mn.add( CurrentSourceElement( 0, 4, 1))
+
+    mn.add( ConductanceElement( 4, 2, 4))
+    mn.add( CapacitanceElement( 4, 2, 2))
+    mn.add( InductanceElement( 4, 3, 1/6))
+    mn.add( CapacitanceElement( 3, 2, 3))
+
+    mn.add( InductanceElement( 2, 0, 1/2))
+    mn.add( InductanceElement( 2, 1, 3/4))
+    mn.add( CapacitanceElement( 2, 1, 2/3))
+    mn.add( ConductanceElement( 1, 0, 1))
+
+    mn.semantic(4)
+
+    for log_omega in np.arange(-1, 1.05, 0.1):
+        omega = 10**log_omega
+        mn.factor(s=omega*1j)
+        mn.solve()
+        mn.solve_adjoint()
+
+        abs_phi = mn.phi()
+        abs_phi_dbs = np.abs(abs_phi)
+
+        #print(mn.sensitivities())
+
+        d_phi_by_d_omega = mn.sens_to_omega()
+
+        abs_sens = mn.abs_sens(d_phi_by_d_omega)
+        abs_sens_napiers = mn.abs_sens_napiers(d_phi_by_d_omega)
+        abs_sens_dbs = mn.abs_sens_dbs(d_phi_by_d_omega)
+        abs_sens_dbs_log10_omega = mn.sens_to_log10(abs_sens_dbs, omega)
+
+        print( omega, abs_phi_dbs, abs_sens, abs_sens_napiers, abs_sens_dbs, abs_sens_dbs_log10_omega)

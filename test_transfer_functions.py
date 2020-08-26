@@ -159,3 +159,158 @@ def test_H():
     mn.semantic(2)
 
     run_sparse( mn.G, mn.C, mn.W, mn.d, 3)
+
+def test_bott_duffin():
+
+    mn = ModifiedNodal()
+
+    mn.add( CurrentSourceElement( 0, 4, 1))
+
+    mn.add( ConductanceElement( 4, 2, 4))
+    mn.add( CapacitanceElement( 4, 2, 2))
+    mn.add( InductanceElement( 4, 3, 1/6))
+    mn.add( CapacitanceElement( 3, 2, 3))
+
+    mn.add( InductanceElement( 2, 0, 1/2))
+    mn.add( InductanceElement( 2, 1, 3/4))
+    mn.add( CapacitanceElement( 2, 1, 2/3))
+    mn.add( ConductanceElement( 1, 0, 1))
+
+    mn.semantic(4)
+
+    run_sparse( mn.G, mn.C, mn.W, mn.d, 7, xunits='rads/sec')
+
+def test_function_29():
+
+    mn = ModifiedNodal()
+
+    mn.add( CurrentSourceElement( 0, 3, 1))
+
+    mn.add( ConductanceElement( 3, 0, 1))
+    mn.add( InductanceElement( 3, 0, 5/6))
+
+    mn.add( InductanceElement( 3, 2, 5/4))
+
+    mn.add( ConductanceElement( 2, 1, 8/25))
+
+
+    mn.add( ConductanceElement( 1, 0, 24/25))
+    mn.add( CapacitanceElement( 1, 0, 16/25))
+
+    mn.semantic(3)
+
+    run_sparse( mn.G, mn.C, mn.W, mn.d, 7)
+
+def test_unit_r():
+
+    mn = ModifiedNodal()
+
+    mn.add( CurrentSourceElement( 0, 2, 1))
+
+    k = 3
+
+    mn.add( ConductanceElement( 2, 1, 1))
+    mn.add( InductanceElement( 2, 1, 1/k))
+
+    mn.add( ConductanceElement( 1, 0, 1))
+    mn.add( CapacitanceElement( 1, 0, 1/k))
+
+    mn.semantic(2)
+
+    run_sparse( mn.G, mn.C, mn.W, mn.d, 7)
+
+def test_brune_rc():
+
+    mn = ModifiedNodal()
+    
+    L1 = 1/(1+np.sqrt(2))
+    L2 = 2/(1+np.sqrt(2))
+    M = -np.sqrt(2)/(1+np.sqrt(2))
+    C = 2 + np.sqrt(2)
+    R = 1
+
+    mn.add( CurrentSourceElement( 0, 1, 1))
+
+    mn.add( TransformerElement( 1, 2, 3, 2, l1=L1, l2=L2, m=M))    
+    mn.add( CapacitanceElement( 2, 0, C))
+
+    mn.add( ConductanceElement( 3, 0, 1/R))
+
+    mn.semantic(1)
+    run_sparse( mn.G, mn.C, mn.W, mn.d, 7)
+
+def test_brune():
+
+    """
+G: [[ 0.  0.  0.  1.  0.]
+    [ 0.  0.  0. -1. -1.]
+    [ 0.  0.  4.  0.  1.]
+    [ 1. -1.  0.  0.  0.]
+    [ 0. -1.  1.  0.  0.]]
+C: [[ 0.    0.    0.    0.    0.  ]
+    [ 0.    1.    0.    0.    0.  ]
+    [ 0.    0.    0.    0.    0.  ]
+    [ 0.    0.    0.   -1.   -0.5 ]
+    [ 0.    0.    0.   -0.5  -0.25]]
+W: [1. 0. 0. 0. 0.]
+d: [0. 0. 1. 0. 0.]
+"""
+
+    mn = ModifiedNodal()
+
+    L1 = 1
+    L2 = 1/4
+    M = 1/2
+    C = 1
+    R = 1/4
+
+    mn.add( CurrentSourceElement( 0, 1, 1))
+
+    mn.add( TransformerElement( 1, 2, 3, 2, l1=L1, l2=L2, m=M))    
+    mn.add( CapacitanceElement( 2, 0, C))
+
+    mn.add( ConductanceElement( 3, 0, 1/R))
+
+    mn.semantic(1)
+    run_sparse( mn.G, mn.C, mn.W, mn.d, 7)
+
+def test_brune_fig26():
+
+    mn = ModifiedNodal()
+
+    R1 = 0.453
+    L1 = 0.547
+    L2 = 0.047
+    M = 0.16
+    C = 10.66
+    R = 0.047
+
+    mn.add( CurrentSourceElement( 0, 1, 1))
+
+    mn.add( ConductanceElement( 1, 4, 1/R1))
+
+    mn.add( TransformerElement( 4, 2, 3, 2, l1=L1, l2=L2, m=M))    
+    mn.add( CapacitanceElement( 2, 0, C))
+
+    mn.add( ConductanceElement( 3, 0, 1/R))
+
+    mn.semantic(1)
+    run_sparse( mn.G, mn.C, mn.W, mn.d, 3)
+
+def test_brune_fig28():
+
+    mn = ModifiedNodal()
+
+    mn.add( CurrentSourceElement( 0, 1, 1))
+
+    mn.add( ConductanceElement( 1, 3, 2))
+    mn.add( InductanceElement( 1, 2, 1/2))
+    mn.add( CapacitanceElement( 2, 3, 1))
+
+    mn.add( InductanceElement( 3, 0, 1/2))
+    mn.add( CapacitanceElement( 3, 4, 1))
+    mn.add( ConductanceElement( 4, 0, 2))
+
+    mn.semantic(1)
+    run_sparse( mn.G, mn.C, mn.W, mn.d, 5)
+

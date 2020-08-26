@@ -90,7 +90,7 @@ def run( G, C, W, d, n=2, fS=1.0):
 
 from plot_transfer_function import plot_transfer_function
 
-def run_sparse( GG, CC, W, d, n=2, fS=1.0):
+def run_sparse( GG, CC, W, d, n=2, fS=1.0, xunits='Hz'):
   print( "="*40)
   print( f"run_sparse: n={n} fS={fS}")
 
@@ -135,7 +135,7 @@ def run_sparse( GG, CC, W, d, n=2, fS=1.0):
   numerator_coeffs = reduce_poly(numerator_coeffs)
   denominator_coeffs = reduce_poly(denominator_coeffs)
   print( f"DFT Interpolated: {p(numerator_coeffs)} {p(denominator_coeffs)}")
-  plot_transfer_function( 1, numerator_coeffs, 1, denominator_coeffs, xunits='Hz')
+  plot_transfer_function( 1, numerator_coeffs, 1, denominator_coeffs, xunits=xunits)
 
   n_roots = np.roots( numerator_coeffs[::-1])
   d_roots = np.roots( denominator_coeffs[::-1])

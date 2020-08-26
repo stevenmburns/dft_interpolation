@@ -70,4 +70,3 @@ def test_ex5():
 
   d = np.array( [1,0])
   run( G, C, W, d, 3)
-  

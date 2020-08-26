@@ -84,9 +84,13 @@ class ImpedanceElement(TwoTerminalElement):
         mn.assign_C(None, None, -self.l)
         mn.incr_cursor()
 
-    def sens(self, mn):
-        return -mn.Xa[self.cursor]*mn.X[self.cursor]
-
+    def sens(self, mn, key='r'):
+        if key == 'r':
+            return -mn.Xa[self.cursor]*mn.X[self.cursor]
+        elif key == 'l':
+            return -mn.s*mn.Xa[self.cursor]*mn.X[self.cursor]
+        else:
+            return None
 
 class ConductanceElement(TwoTerminalElement):
     def __init__(self, i, j, g):
@@ -234,6 +238,71 @@ class OpAmpElement(FourTerminalElement):
     def sens(self, mn):
         return None  # No parameters (we could use inverse gain (B))
 
+class IdealTransformerElement(FourTerminalElement):
+    def __init__(self, j, jp, k, kp, n):
+        self.n = n
+        super().__init__(j, jp, k, kp, 1)
+
+    def update(self, mn):
+        self.cursor = mn.cursor
+        mn.assign_G(None, self.j, 1)
+        mn.assign_G(None, self.jp, -1)
+        mn.assign_G(None, self.k, -self.n)
+        mn.assign_G(None, self.kp, self.n)
+        mn.assign_G(self.j, None, 1)
+        mn.assign_G(self.jp, None, -1)
+        mn.assign_G(self.k, None, -self.n)
+        mn.assign_G(self.kp, None, self.n)
+        mn.incr_cursor()
+
+    def sens(self, mn):
+        result = 0
+        if self.k > 0:
+            result -= mn.Xa[self.k-1]*mn.X[self.cursor]
+            result -= mn.Xa[self.cursor]*mn.X[self.k-1]
+        if self.kp > 0:
+            result += mn.Xa[self.kp-1]*mn.X[self.cursor]
+            result += mn.Xa[self.cursor]*mn.X[self.kp-1]
+        return result
+
+class TransformerElement(FourTerminalElement):
+    def __init__(self, j, jp, k, kp, *, l1, l2, m):
+        self.l1 = l1
+        self.l2 = l2
+        self.m = m
+        super().__init__(j, jp, k, kp, 2)
+
+    def update(self, mn):
+        self.cursor = mn.cursor
+        mn.assign_G(None, self.j, 1)
+        mn.assign_G(None, self.jp, -1)
+        mn.assign_G(self.j, None, 1)
+        mn.assign_G(self.jp, None, -1)
+        mn.incr_cursor()
+
+        mn.assign_G(None, self.k, 1)
+        mn.assign_G(None, self.kp, -1)
+        mn.assign_G(self.k, None, 1)
+        mn.assign_G(self.kp, None, -1)
+
+        # None trick can't be used because there are two cursors
+        mn.c_dok[self.cursor+0,self.cursor+0] = -self.l1
+        mn.c_dok[self.cursor+0,self.cursor+1] = -self.m
+        mn.c_dok[self.cursor+1,self.cursor+0] = -self.m
+        mn.c_dok[self.cursor+1,self.cursor+1] = -self.l2
+
+        mn.incr_cursor()
+
+    def sens(self, mn, key='l1'):
+        if key == 'l1':
+            return -mn.s*mn.Xa[self.cursor+0]*mn.X[self.cursor+0]
+        if key == 'l2':
+            return -mn.s*mn.Xa[self.cursor+1]*mn.X[self.cursor+1]
+        if key == 'm':
+            result = 0
+            result += -mn.s*mn.Xa[self.cursor+0]*mn.X[self.cursor+1]
+            result += -mn.s*mn.Xa[self.cursor+1]*mn.X[self.cursor+0]
+            return result
 
 class ModifiedNodal:
     #factor_napiers_to_dbs = 20*np.log10(np.e)
