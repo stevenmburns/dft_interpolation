@@ -1,7 +1,7 @@
 
 import numpy as np
 from modified_nodal import *
-
+import pytest
 
 def test_Conductance():
     mn = ModifiedNodal()
@@ -168,13 +168,14 @@ def test_IdealTransformer():
     assert np.isclose( mn.phi(), n/(n*n+1))
     assert np.isclose( mn.elements[1].sens(mn), mn.phi()/n - 2*mn.phi()**2)
 
+@pytest.mark.skip(reason="Don't have a good test circuit for a transformer")
 def test_Transformer():
     mn = ModifiedNodal()
     omega = 1
     R1 = 1
     R2 = 1
     L1 = 1
-    L2 = 4
+    L2 = 1
     M = np.sqrt(L1*L2)
     mn.add(VoltageSourceElement(1, 0, 1))
     mn.add(TransformerElement(2, 0, 3, 0, l1=L1, l2=L2, m=M))
