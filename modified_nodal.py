@@ -257,8 +257,7 @@ class VCTElement(FourTerminalElement):
         return result
 
     def rel_sens(self, mn):
-        return self.sens( mn)/self.g
-
+        return self.sens(mn)*self.g/mn.phi()
 
 class OpAmpElement(FourTerminalElement):
     def __init__(self, j, jp, k, kp):

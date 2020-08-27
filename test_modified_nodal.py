@@ -15,6 +15,7 @@ def test_Conductance(G):
     # I=GV; V=I/G; V=IG^-1; V'=-IG^-2=-0.25
     mn.solve_adjoint()
     assert np.isclose(mn.elements[0].sens(mn), -G**-2)
+    assert np.isclose(mn.elements[0].rel_sens(mn), -1)
 
 
 @pytest.mark.parametrize( "R", [1,2])
@@ -29,6 +30,7 @@ def test_Resistance(R):
     #  V=IR; V'=I=1
     mn.solve_adjoint()
     assert np.isclose(mn.elements[0].sens(mn), 1)
+    assert np.isclose(mn.elements[0].rel_sens(mn), 1)
 
 
 @pytest.mark.parametrize( "omega,C", [(1,1),
@@ -45,6 +47,7 @@ def test_Capacitance(omega,C):
     # I=CsV; V=I/(Cs); V=(I/s) C^-1; V'=-(I/s) C^-2=-0.25
     mn.solve_adjoint()
     assert np.isclose(mn.elements[0].sens(mn), -1/(C**2*mn.s))
+    assert np.isclose(mn.elements[0].rel_sens(mn), -1)
 
 
 @pytest.mark.parametrize( "omega,L", [(1,1),
@@ -61,6 +64,7 @@ def test_Inductance(omega,L):
     # V=IsL; V'=(Is)=s
     mn.solve_adjoint()
     assert np.isclose(mn.elements[0].sens(mn), mn.s)
+    assert np.isclose(mn.elements[0].rel_sens(mn), 1)
 
 @pytest.mark.parametrize( "omega,R,L", [(1,1,1),
                                         (2,1,1),
@@ -78,6 +82,8 @@ def test_Impedance(omega,R,L):
     mn.solve_adjoint()
     assert np.isclose(mn.elements[0].sens(mn,'r'), 1)
     assert np.isclose(mn.elements[0].sens(mn,'l'), mn.s)
+    assert np.isclose(mn.elements[0].rel_sens(mn,'r'), R/(R+L*mn.s))
+    assert np.isclose(mn.elements[0].rel_sens(mn,'l'), L/(R+L*mn.s)*mn.s)
 
 @pytest.mark.parametrize( "J,G", [(1,1),(2,1),(1,2)])
 def test_CurrentSource(J,G):
@@ -93,6 +99,7 @@ def test_CurrentSource(J,G):
     # V=I/G; V'=1/G
     mn.solve_adjoint()
     assert np.isclose(mn.elements[1].sens(mn), 1/G)
+    assert np.isclose(mn.elements[1].rel_sens(mn), 1)
 
 
 @pytest.mark.parametrize( "E", [1,1/10])
@@ -107,6 +114,7 @@ def test_VoltageSource(E):
     # V=E; V'=1
     mn.solve_adjoint()
     assert np.isclose(mn.elements[0].sens(mn), 1)
+    assert np.isclose(mn.elements[0].rel_sens(mn), 1)
 
 
 @pytest.mark.parametrize( "E,mu", [(1,-3),
@@ -125,6 +133,7 @@ def test_VVT(E,mu):
     # V=mu E; V'=E
     mn.solve_adjoint()
     assert np.isclose(mn.elements[1].sens(mn), E)
+    assert np.isclose(mn.elements[1].rel_sens(mn), 1)
 
 
 @pytest.mark.parametrize( "E,g,R", [(1,-3,2),
@@ -144,6 +153,7 @@ def test_VCT(E,g,R):
     # V'=E/g2
     mn.solve_adjoint()
     assert np.isclose(mn.elements[1].sens(mn), E*R)
+    assert np.isclose(mn.elements[1].rel_sens(mn), g/(E*g*R)*E*R)
 
 @pytest.mark.parametrize( "G1,G2", [(10,2.5),(1,1)])
 def test_OpAmp(G1,G2):
@@ -173,8 +183,10 @@ def test_IdealTransformer(n):
     print(mn.phi())
     # n * (n*n+1)^-1
     # (n*n+1)^-1 - n * (n*n+1)^-2 * 2 * n
+
     assert np.isclose( mn.phi(), n/(n*n+1))
-    assert np.isclose( mn.elements[1].sens(mn), mn.phi()/n - 2*mn.phi()**2)
+    assert np.isclose( mn.elements[1].sens(mn), mn.phi()*(1/n - 2*mn.phi()))
+    assert np.isclose( mn.elements[1].rel_sens(mn), 1 - 2*n*mn.phi())
 
 @pytest.mark.parametrize( "omega,R1,R2,L1,L2,M", [(1,2,3,1,2,1),
                                                   (2,2,3,1,2,1),
@@ -211,6 +223,12 @@ def test_Transformer_ex16_3(omega,R1,R2,L1,L2,M):
     assert np.isclose(mn.elements[1].sens(mn,'m'), d_phi_d_M)
     assert np.isclose(mn.elements[2].sens(mn), d_phi_d_R1)
     assert np.isclose(mn.elements[3].sens(mn), d_phi_d_R2)
+
+    assert np.isclose(mn.elements[1].rel_sens(mn,'l1'), L1/phi*d_phi_d_L1)
+    assert np.isclose(mn.elements[1].rel_sens(mn,'l2'), L2/phi*d_phi_d_L2)
+    assert np.isclose(mn.elements[1].rel_sens(mn,'m'), M/phi*d_phi_d_M)
+    assert np.isclose(mn.elements[2].rel_sens(mn), R1/phi*d_phi_d_R1)
+    assert np.isclose(mn.elements[3].rel_sens(mn), R2/phi*d_phi_d_R2)
     
 
 def test_ex_6_1_1():
@@ -232,9 +250,11 @@ def test_ex_6_1_1():
     mn.semantic(2)
     mn.factor(s=2)
     mn.solve()
-    assert np.isclose(mn.phi(), 1/9)
     mn.solve_adjoint()
+
+    assert np.isclose(mn.phi(), 1/9)
     assert np.isclose(mn.elements[1].sens(mn), 2/27)
+    assert np.isclose(mn.elements[1].rel_sens(mn), 2/3)
 
 
 def test_ex_6_4_1():
@@ -259,9 +279,9 @@ def test_ex_6_4_1():
     mn.semantic(2)
     mn.factor(s=1j)
     mn.solve()
-    assert np.isclose(mn.phi(), 0.4+0.2j)
     mn.solve_adjoint()
-    print(mn.X, mn.Xa)
+
+    assert np.isclose(mn.phi(), 0.4+0.2j)
     assert np.isclose(mn.elements[2].sens(mn), 1/25-7j/25)
     assert np.isclose(mn.elements[3].sens(mn), -3/25-4j/25)
     assert np.isclose(mn.elements[6].sens(mn), 1/25-7j/25)
