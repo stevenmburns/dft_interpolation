@@ -49,6 +49,15 @@ class ResistanceElement(TwoTerminalElement):
     def sens(self, mn):
         return -mn.Xa[self.cursor]*mn.X[self.cursor]
 
+    def rel_sens(self, mn):
+        # f(x)
+        # f'(x) --- absolute sens
+        # df/dx
+        # (df/f) / (dx/x) --- rel sens
+        # x/f*df/dx --- rel sens
+
+        return self.sens(mn)*self.r/mn.phi()
+
 
 class InductanceElement(TwoTerminalElement):
     def __init__(self, i, j, l):
@@ -67,6 +76,8 @@ class InductanceElement(TwoTerminalElement):
     def sens(self, mn):
         return -mn.s*mn.Xa[self.cursor]*mn.X[self.cursor]
 
+    def rel_sens(self, mn):
+        return self.sens(mn)*self.l/mn.phi()
 
 class ImpedanceElement(TwoTerminalElement):
     def __init__(self, i, j, *, r, l):
@@ -92,6 +103,14 @@ class ImpedanceElement(TwoTerminalElement):
         else:
             return None
 
+    def rel_sens(self, mn, key='r'):
+        if key == 'r':
+            return self.sens(mn,key)*self.r/mn.phi()
+        elif key == 'l':
+            return self.sens(mn,key)*self.l/mn.phi()
+        else:
+            return None
+
 class ConductanceElement(TwoTerminalElement):
     def __init__(self, i, j, g):
         self.g = g
@@ -113,6 +132,9 @@ class ConductanceElement(TwoTerminalElement):
             result -= mn.Xa[self.i-1]*mn.X[self.j-1]
             result -= mn.Xa[self.j-1]*mn.X[self.i-1]
         return result
+
+    def rel_sens(self, mn):
+        return self.sens(mn)*self.g/mn.phi()
 
 
 class CapacitanceElement(TwoTerminalElement):
@@ -137,6 +159,9 @@ class CapacitanceElement(TwoTerminalElement):
             result -= mn.Xa[self.j-1]*mn.X[self.i-1]
         return mn.s*result
 
+    def rel_sens(self, mn):
+        return self.sens(mn)*self.c/mn.phi()
+
 
 class CurrentSourceElement(TwoTerminalElement):
     def __init__(self, i, j, J):
@@ -155,6 +180,9 @@ class CurrentSourceElement(TwoTerminalElement):
             result -= mn.Xa[self.j-1]*mn.W[self.j-1]
         return result
 
+    def rel_sens(self, mn):
+        return self.sens(mn)*self.J/mn.phi()
+
 
 class VoltageSourceElement(TwoTerminalElement):
     def __init__(self, i, j, E):
@@ -172,6 +200,9 @@ class VoltageSourceElement(TwoTerminalElement):
 
     def sens(self, mn):
         return -mn.Xa[self.cursor]*mn.W[self.cursor]
+
+    def rel_sens(self, mn):
+        return self.sens(mn)*self.E/mn.phi()
 
 
 class VVTElement(FourTerminalElement):
@@ -196,6 +227,9 @@ class VVTElement(FourTerminalElement):
         if self.jp > 0:
             result += mn.Xa[self.cursor]*mn.X[self.jp-1]
         return result
+
+    def rel_sens(self, mn):
+        return self.sens(mn)*self.mu/mn.phi()
 
 
 class VCTElement(FourTerminalElement):
@@ -222,6 +256,9 @@ class VCTElement(FourTerminalElement):
 
         return result
 
+    def rel_sens(self, mn):
+        return self.sens( mn)/self.g
+
 
 class OpAmpElement(FourTerminalElement):
     def __init__(self, j, jp, k, kp):
@@ -237,6 +274,10 @@ class OpAmpElement(FourTerminalElement):
 
     def sens(self, mn):
         return None  # No parameters (we could use inverse gain (B))
+
+    def rel_sens(self, mn):
+        return None
+
 
 class IdealTransformerElement(FourTerminalElement):
     def __init__(self, j, jp, k, kp, n):
@@ -264,6 +305,10 @@ class IdealTransformerElement(FourTerminalElement):
             result += mn.Xa[self.kp-1]*mn.X[self.cursor]
             result += mn.Xa[self.cursor]*mn.X[self.kp-1]
         return result
+
+    def rel_sens(self, mn):
+        return self.sens(mn)*self.n/mn.phi()
+
 
 class TransformerElement(FourTerminalElement):
     def __init__(self, j, jp, k, kp, *, l1, l2, m):
@@ -303,6 +348,14 @@ class TransformerElement(FourTerminalElement):
             result += -mn.s*mn.Xa[self.cursor+0]*mn.X[self.cursor+1]
             result += -mn.s*mn.Xa[self.cursor+1]*mn.X[self.cursor+0]
             return result
+
+    def rel_sens(self, mn, key='l1'):
+        if key == 'l1':
+            return self.sens(mn,key)*self.l1/mn.phi()
+        if key == 'l2':
+            return self.sens(mn,key)*self.l2/mn.phi()
+        if key == 'm':
+            return self.sens(mn,key)*self.m/mn.phi()
 
 class ModifiedNodal:
     #factor_napiers_to_dbs = 20*np.log10(np.e)
@@ -436,3 +489,6 @@ class ModifiedNodal:
 
     def sensitivities(self):
         return [el.sens(self) for el in self.elements]
+
+    def rel_sensitivities(self):
+        return [el.rel_sens(self) for el in self.elements]

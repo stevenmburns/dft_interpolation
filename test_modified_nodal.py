@@ -3,36 +3,39 @@ import numpy as np
 from modified_nodal import *
 import pytest
 
-def test_Conductance():
+@pytest.mark.parametrize( "G", [1,2,1/2])
+def test_Conductance(G):
     mn = ModifiedNodal()
-    mn.add(ConductanceElement(1, 0, 2))
+    mn.add(ConductanceElement(1, 0, G))
     mn.semantic(1)
     mn.W[0] = 1
     mn.factor(s=1)
     mn.solve()
-    assert np.isclose(mn.phi(), 0.5)
+    assert np.isclose(mn.phi(), 1/G)
     # I=GV; V=I/G; V=IG^-1; V'=-IG^-2=-0.25
     mn.solve_adjoint()
-    assert np.isclose(mn.elements[0].sens(mn), -0.25)
+    assert np.isclose(mn.elements[0].sens(mn), -G**-2)
 
 
-def test_Resistance():
+@pytest.mark.parametrize( "R", [1,2])
+def test_Resistance(R):
     mn = ModifiedNodal()
-    mn.add(ResistanceElement(1, 0, 2))
+    mn.add(ResistanceElement(1, 0, R))
     mn.semantic(1)
     mn.W[0] = 1
     mn.factor(s=1)
     mn.solve()
-    assert np.isclose(mn.phi(), 2.0)
+    assert np.isclose(mn.phi(), R)
     #  V=IR; V'=I=1
     mn.solve_adjoint()
     assert np.isclose(mn.elements[0].sens(mn), 1)
 
 
-def test_Capacitance():
+@pytest.mark.parametrize( "omega,C", [(1,1),
+                                      (2,1),
+                                      (1,2)])
+def test_Capacitance(omega,C):
     mn = ModifiedNodal()
-    omega = 1
-    C = 2
     mn.add(CapacitanceElement(1, 0, C))
     mn.semantic(1)
     mn.W[0] = 1
@@ -44,10 +47,11 @@ def test_Capacitance():
     assert np.isclose(mn.elements[0].sens(mn), -1/(C**2*mn.s))
 
 
-def test_Inductance():
+@pytest.mark.parametrize( "omega,L", [(1,1),
+                                      (2,1),
+                                      (1,2)])
+def test_Inductance(omega,L):
     mn = ModifiedNodal()
-    omega = 3
-    L = 2
     mn.add(InductanceElement(1, 0, L))
     mn.semantic(1)
     mn.W[0] = 1
@@ -58,12 +62,12 @@ def test_Inductance():
     mn.solve_adjoint()
     assert np.isclose(mn.elements[0].sens(mn), mn.s)
 
-
-def test_Impedance():
+@pytest.mark.parametrize( "omega,R,L", [(1,1,1),
+                                        (2,1,1),
+                                        (1,2,1),
+                                        (1,1,2)])
+def test_Impedance(omega,R,L):
     mn = ModifiedNodal()
-    omega = 2
-    R = 2
-    L = 3
     mn.add(ImpedanceElement(1, 0, r=R, l=L))
     mn.semantic(1)
     mn.W[0] = 1
@@ -75,34 +79,40 @@ def test_Impedance():
     assert np.isclose(mn.elements[0].sens(mn,'r'), 1)
     assert np.isclose(mn.elements[0].sens(mn,'l'), mn.s)
 
-
-def test_CurrentSource():
+@pytest.mark.parametrize( "J,G", [(1,1),(2,1),(1,2)])
+def test_CurrentSource(J,G):
     mn = ModifiedNodal()
+    J = 1
     G = 2
     mn.add(ConductanceElement(1, 0, G))
-    mn.add(CurrentSourceElement(0, 1, 1))
+    mn.add(CurrentSourceElement(0, 1, J))
     mn.semantic(1)
     mn.factor(s=1)
     mn.solve()
-    assert np.isclose(mn.phi(), 0.5)
+    assert np.isclose(mn.phi(), J/G)
     # V=I/G; V'=1/G
     mn.solve_adjoint()
     assert np.isclose(mn.elements[1].sens(mn), 1/G)
 
 
-def test_VoltageSource():
+@pytest.mark.parametrize( "E", [1,1/10])
+def test_VoltageSource(E):
     mn = ModifiedNodal()
-    mn.add(VoltageSourceElement(1, 0, 1))
+    E = 1
+    mn.add(VoltageSourceElement(1, 0, E))
     mn.semantic(1)
     mn.factor(s=1)
     mn.solve()
-    assert np.isclose(mn.phi(), 1.0)
+    assert np.isclose(mn.phi(), E)
     # V=E; V'=1
     mn.solve_adjoint()
     assert np.isclose(mn.elements[0].sens(mn), 1)
 
 
-def test_VVT():
+@pytest.mark.parametrize( "E,mu", [(1,-3),
+                                   (1/10,-3),
+                                   (1,3)])
+def test_VVT(E,mu):
     mn = ModifiedNodal()
     E = 1
     mu = -3
@@ -117,31 +127,30 @@ def test_VVT():
     assert np.isclose(mn.elements[1].sens(mn), E)
 
 
-def test_VCT():
+@pytest.mark.parametrize( "E,g,R", [(1,-3,2),
+                                    (1/10,-3,2),
+                                    (1,3,2),
+                                    (1,-3,4)])
+def test_VCT(E,g,R):
     mn = ModifiedNodal()
-    E = 1
-    g = -3
-    g2 = 2
     mn.add(VoltageSourceElement(1, 0, E))
     mn.add(VCTElement(1, 0, 0, 2, g))
-    mn.add(ConductanceElement(2, 0, g2))
+    mn.add(ResistanceElement(2, 0, R))
     mn.semantic(2)
     mn.factor(s=1)
     mn.solve()
     # V=E*g/g2
-    assert np.isclose(mn.phi(), E*g/g2)
+    assert np.isclose(mn.phi(), E*g*R)
     # V'=E/g2
     mn.solve_adjoint()
-    assert np.isclose(mn.elements[1].sens(mn), E/g2)
+    assert np.isclose(mn.elements[1].sens(mn), E*R)
 
-
-def test_OpAmp():
+@pytest.mark.parametrize( "G1,G2", [(10,2.5),(1,1)])
+def test_OpAmp(G1,G2):
     "Inverting Amp"
     mn = ModifiedNodal()
     mn.add(VoltageSourceElement(1, 0, 1))
     mn.add(OpAmpElement(0, 2, 3, 0))
-    G1 = 10
-    G2 = 2.5
     mn.add(ConductanceElement(1, 2, G1))
     mn.add(ConductanceElement(2, 3, G2))
     mn.semantic(3)
@@ -149,10 +158,9 @@ def test_OpAmp():
     mn.solve()
     assert np.isclose(mn.phi(), -G1/G2)
 
-
-def test_IdealTransformer():
+@pytest.mark.parametrize( "n", [1, 4.5])
+def test_IdealTransformer(n):
     mn = ModifiedNodal()
-    n = 4.5
     mn.add(VoltageSourceElement(1, 0, 1))
     mn.add(IdealTransformerElement(2, 0, 3, 0, n))
     mn.add(ConductanceElement(1, 2, 1))
@@ -168,18 +176,20 @@ def test_IdealTransformer():
     assert np.isclose( mn.phi(), n/(n*n+1))
     assert np.isclose( mn.elements[1].sens(mn), mn.phi()/n - 2*mn.phi()**2)
 
-def test_Transformer_ex16_3():
+@pytest.mark.parametrize( "omega,R1,R2,L1,L2,M", [(1,2,3,1,2,1),
+                                                  (2,2,3,1,2,1),
+                                                  (1,3,3,1,2,1),
+                                                  (1,2,4,1,2,1),
+                                                  (1,2,3,2,2,1),
+                                                  (1,2,3,1,3,1),
+                                                  (1,2,3,1,2,2)])
+def test_Transformer_ex16_3(omega,R1,R2,L1,L2,M):
     mn = ModifiedNodal()
-    omega = 1
-    R1 = 2
-    R2 = 3
-    L1 = 1
-    L2 = 2
-    M = 1
+    #omega,R1,R2,L1,L2,M = 1,3,1,2,1
     mn.add(VoltageSourceElement(1, 0, 1))
     mn.add(TransformerElement(2, 0, 0, 3, l1=L1, l2=L2, m=M))
-    mn.add(ConductanceElement(1, 2, 1/R1))
-    mn.add(ConductanceElement(3, 0, 1/R2))
+    mn.add(ResistanceElement(1, 2, R1))
+    mn.add(ResistanceElement(3, 0, R2))
     mn.semantic(3)
     mn.factor(s=1j*omega)
     mn.solve()
@@ -192,9 +202,15 @@ def test_Transformer_ex16_3():
     d_phi_d_L2 = -N*mn.s*(mn.s*L1+R1)/(D**2)
     d_phi_d_M = (-mn.s*D*R2-2*mn.s**3*M**2*R2)/(D**2)
 
+    d_phi_d_R1 = -N*(mn.s*L2+R2)/(D**2)
+    d_phi_d_R2 = (D*(-mn.s*M) - N*(mn.s*L1+R1))/(D**2)
+
     assert np.isclose( mn.phi(), phi)
     assert np.isclose(mn.elements[1].sens(mn,'l1'), d_phi_d_L1)
     assert np.isclose(mn.elements[1].sens(mn,'l2'), d_phi_d_L2)
+    assert np.isclose(mn.elements[1].sens(mn,'m'), d_phi_d_M)
+    assert np.isclose(mn.elements[2].sens(mn), d_phi_d_R1)
+    assert np.isclose(mn.elements[3].sens(mn), d_phi_d_R2)
     
 
 def test_ex_6_1_1():
@@ -390,3 +406,11 @@ def test_bott_duffin():
         abs_sens_dbs_log10_omega = mn.sens_to_log10(abs_sens_dbs, omega)
 
         print( omega, abs_phi_dbs, abs_sens, abs_sens_napiers, abs_sens_dbs, abs_sens_dbs_log10_omega)
+
+    omega = 1
+    mn.factor(s=omega*1j)
+    mn.solve()
+    mn.solve_adjoint()
+
+    print( f"Sens at omega: {omega} {np.abs(mn.sensitivities())}")
+    print( f"Sens at omega: {omega} {np.abs(mn.rel_sensitivities())}")
