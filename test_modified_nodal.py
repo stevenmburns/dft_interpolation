@@ -168,17 +168,16 @@ def test_IdealTransformer():
     assert np.isclose( mn.phi(), n/(n*n+1))
     assert np.isclose( mn.elements[1].sens(mn), mn.phi()/n - 2*mn.phi()**2)
 
-@pytest.mark.skip(reason="Don't have a good test circuit for a transformer")
-def test_Transformer():
+def test_Transformer_ex16_3():
     mn = ModifiedNodal()
     omega = 1
-    R1 = 1
-    R2 = 1
+    R1 = 2
+    R2 = 3
     L1 = 1
-    L2 = 1
-    M = np.sqrt(L1*L2)
+    L2 = 2
+    M = 1
     mn.add(VoltageSourceElement(1, 0, 1))
-    mn.add(TransformerElement(2, 0, 3, 0, l1=L1, l2=L2, m=M))
+    mn.add(TransformerElement(2, 0, 0, 3, l1=L1, l2=L2, m=M))
     mn.add(ConductanceElement(1, 2, 1/R1))
     mn.add(ConductanceElement(3, 0, 1/R2))
     mn.semantic(3)
@@ -186,13 +185,17 @@ def test_Transformer():
     mn.solve()
     mn.solve_adjoint()
 
-    print(mn.phi())
-    #Z = R1 + 1j*omega*L1 - (1j*omega*M)**2/(R2 + 1j*omega*L2)
-    phi = mn.s*M*R2/((mn.s*M)**2 + (R1+mn.s*L1) * (R2-mn.s*L2))
+    N = -mn.s*M*R2
+    D = (mn.s*L1+R1)*(mn.s*L2+R2)-(mn.s*M)**2
+    phi = N/D
+    d_phi_d_L1 = -N*mn.s*(mn.s*L2+R2)/(D**2)
+    d_phi_d_L2 = -N*mn.s*(mn.s*L1+R1)/(D**2)
+    d_phi_d_M = (-mn.s*D*R2-2*mn.s**3*M**2*R2)/(D**2)
 
     assert np.isclose( mn.phi(), phi)
+    assert np.isclose(mn.elements[1].sens(mn,'l1'), d_phi_d_L1)
+    assert np.isclose(mn.elements[1].sens(mn,'l2'), d_phi_d_L2)
     
-#    assert np.isclose( mn.elements[1].sens(mn), mn.phi()/n - 2*mn.phi()**2)
 
 def test_ex_6_1_1():
     "page 174"
