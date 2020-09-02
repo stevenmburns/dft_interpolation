@@ -1,8 +1,20 @@
 import numpy as np
-import matplotlib.pyplot as plt
 
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
+
+def plot_bode( xs, dBs, degrees, xunits):
+  t1 = go.Scatter(x=xs,y=dBs,name="amplitude")
+  t2 = go.Scatter(x=xs,y=degrees,name="phase",yaxis='y2')
+  ly = go.Layout(
+      title='Bode Plot',
+      xaxis={'title': f'Frequency ({xunits})', 'type': 'log'},
+      yaxis={'title': f'Amplitude (dB)'},
+      yaxis2={'title': f'Phase (degrees)', 'overlaying':'y', 'side':'right'}
+  )
+  fig = go.Figure(data=[t1,t2], layout=ly)
+  fig.show()
+
 
 def plot_transfer_function( n_k, n_a, d_k, d_a, xunits='rads/sec'):
 
@@ -28,41 +40,4 @@ def plot_transfer_function( n_k, n_a, d_k, d_a, xunits='rads/sec'):
   dBs = 20*np.log10( np.abs(points))
   degrees = np.angle(points,deg=True)
 
-  if True:
-      t1 = go.Scatter(x=xs,y=dBs,name="amplitude")
-      t2 = go.Scatter(x=xs,y=degrees,name="phase",yaxis='y2')
-      ly = go.Layout(
-          title='Bode Plot',
-          xaxis={'title': f'Frequency ({xunits})', 'type': 'log'},
-          yaxis={'title': f'Amplitude (dB)'},
-          yaxis2={'title': f'Phase (degrees)', 'overlaying':'y', 'side':'right'}
-      )
-      fig = go.Figure(data=[t1,t2], layout=ly)
-      fig.show()
-
-  if False:
-      fig = make_subplots( rows=2, cols=1, xaxis_type="log", shared_xaxes=True, vertical_spacing=0.02)
-      fig.add_trace(
-          go.Scatter(x=xs,y=dBs),
-          row=1, col=1
-      )
-      fig.add_trace(
-          go.Scatter(x=xs,y=degrees),
-          row=2, col=1
-      )
-
-      fig.update_layout( height=600, width=800, title_text="Bode Plot")
-      fig.show()
-
-  if False:
-      plt.xscale( "log")
-      plt.xlabel( f"freq ({xunits})")
-      plt.ylabel( "amplitude (dB)")
-      plt.plot( xs, dBs)
-      plt.show()
-
-      plt.xscale( "log")
-      plt.xlabel( f"freq ({xunits})")
-      plt.ylabel( "phase (degrees)")
-      plt.plot( xs, degrees)
-      plt.show()
+  plot_bode( xs, dBs, degrees, xunits)

@@ -356,6 +356,45 @@ class TransformerElement(FourTerminalElement):
         if key == 'm':
             return self.sens(mn,key)*self.m/mn.phi()
 
+class GyratorElement(FourTerminalElement):
+    def __init__(self, j, jp, k, kp, *, g1, g2):
+        self.g1 = g1
+        self.g2 = g2
+        super().__init__(j, jp, k, kp, 0)
+
+    def update(self, mn):
+        mn.update_G(self.k,  self.j,   self.g1)
+        mn.update_G(self.k,  self.jp, -self.g1)
+        mn.update_G(self.kp, self.j,  -self.g1)
+        mn.update_G(self.kp, self.jp,  self.g1)
+
+        mn.update_G(self.j,  self.k,  -self.g2)
+        mn.update_G(self.j,  self.kp,  self.g2)
+        mn.update_G(self.jp, self.k,   self.g2)
+        mn.update_G(self.jp, self.kp, -self.g2)
+
+    def sens(self, mn, key='g1'):
+        if key == 'g1':
+            result = 0
+            result += mn.s*mn.Xa[self.k ]*mn.X[self.j ]
+            result -= mn.s*mn.Xa[self.k ]*mn.X[self.jp]
+            result -= mn.s*mn.Xa[self.kp]*mn.X[self.j ]
+            result += mn.s*mn.Xa[self.kp]*mn.X[self.jp]
+            return result
+        if key == 'g2':
+            result = 0
+            result -= mn.s*mn.Xa[self.j ]*mn.X[self.k ]
+            result += mn.s*mn.Xa[self.j ]*mn.X[self.kp]
+            result += mn.s*mn.Xa[self.jp]*mn.X[self.k ]
+            result -= mn.s*mn.Xa[self.jp]*mn.X[self.kp]
+            return result
+
+    def rel_sens(self, mn, key='g1'):
+        if key == 'g1':
+            return self.sens(mn,key)*self.g1/mn.phi()
+        if key == 'g2':
+            return self.sens(mn,key)*self.g2/mn.phi()
+
 class ModifiedNodal:
     #factor_napiers_to_dbs = 20*np.log10(np.e)
     factor_napiers_to_dbs = 20/np.log(10)

@@ -188,6 +188,40 @@ def test_IdealTransformer(n):
     assert np.isclose( mn.elements[1].sens(mn), mn.phi()*(1/n - 2*mn.phi()))
     assert np.isclose( mn.elements[1].rel_sens(mn), 1 - 2*n*mn.phi())
 
+@pytest.mark.parametrize( "g1,g2", [(1,1), (1,4)])
+def test_Gyrator_A(g1,g2):
+    mn = ModifiedNodal()
+    mn.add(CurrentSourceElement(0, 1, 1))
+    mn.add(GyratorElement(1, 0, 2, 0, g1=g1, g2=g2))
+    mn.semantic(2)
+    mn.factor(s=1)
+    mn.solve()
+    mn.solve_adjoint()
+
+    print(mn.phi())
+    #I1=-g2*V2; V2=I1/(-g2)
+    assert np.isclose( mn.phi(), -1/g2)
+    #assert np.isclose( mn.elements[1].sens(mn), mn.phi()*(1/n - 2*mn.phi()))
+    #assert np.isclose( mn.elements[1].rel_sens(mn), 1 - 2*n*mn.phi())
+
+
+@pytest.mark.parametrize( "g1,g2", [(1,1), (1,4)])
+def test_Gyrator_B(g1,g2):
+    mn = ModifiedNodal()
+    mn.add(CurrentSourceElement(0, 2, 1))
+    mn.add(GyratorElement(1, 0, 2, 0, g1=g1, g2=g2))
+    mn.semantic(1)
+    mn.factor(s=1)
+    mn.solve()
+    mn.solve_adjoint()
+
+    print(mn.phi())
+    #I2=g1*V1; V1=I2/(g1)
+
+    assert np.isclose( mn.phi(), 1/g1)
+    #assert np.isclose( mn.elements[1].sens(mn), mn.phi()*(1/n - 2*mn.phi()))
+    #assert np.isclose( mn.elements[1].rel_sens(mn), 1 - 2*n*mn.phi())
+
 @pytest.mark.parametrize( "omega,R1,R2,L1,L2,M", [(1,2,3,1,2,1),
                                                   (2,2,3,1,2,1),
                                                   (1,3,3,1,2,1),
@@ -434,3 +468,79 @@ def test_bott_duffin():
 
     print( f"Sens at omega: {omega} {np.abs(mn.sensitivities())}")
     print( f"Sens at omega: {omega} {np.abs(mn.rel_sensitivities())}")
+
+
+from plotly.subplots import make_subplots
+import plotly.graph_objects as go
+
+
+
+def test_brune():
+    mn = ModifiedNodal()
+
+    mn = ModifiedNodal()
+
+    L1 = 1
+    L2 = 1/4
+    M = 1/2
+    C = 1
+    R = 1/4
+
+    mn.add( CurrentSourceElement( 0, 1, 1))
+
+    mn.add( TransformerElement( 1, 2, 3, 2, l1=L1, l2=L2, m=M))    
+    mn.add( CapacitanceElement( 2, 0, C))
+
+    mn.add( ConductanceElement( 3, 0, 1/R))
+
+    mn.semantic(1)
+
+    omegas = []
+    ys = []
+    for log_omega in np.arange(-3, 3.005, 0.01):
+        omega = 10**log_omega
+        omegas.append(omega)
+
+        mn.factor(s=omega*1j)
+        mn.solve()
+        mn.solve_adjoint()
+
+        abs_phi = mn.phi()
+        abs_phi_dbs = np.abs(abs_phi)
+
+        #print(mn.sensitivities())
+
+        d_phi_by_d_omega = mn.sens_to_omega()
+
+        #ys.append(d_phi_by_d_omega)
+        #ys.append(np.abs(mn.elements[1].rel_sens(mn,'l1')))
+        ys.append(np.abs(mn.elements[3].rel_sens(mn)))
+
+        abs_sens = mn.abs_sens(d_phi_by_d_omega)
+        abs_sens_napiers = mn.abs_sens_napiers(d_phi_by_d_omega)
+        abs_sens_dbs = mn.abs_sens_dbs(d_phi_by_d_omega)
+        abs_sens_dbs_log10_omega = mn.sens_to_log10(abs_sens_dbs, omega)
+
+        print( omega, abs_phi_dbs, abs_sens, abs_sens_napiers, abs_sens_dbs, abs_sens_dbs_log10_omega)
+
+
+    xunits = 'rads/sec'
+
+    ys = np.abs(np.array(ys))
+
+    t1 = go.Scatter(x=omegas,y=ys,name="Relative Sensitivity")
+    ly = go.Layout(
+        title='Bode Plot',
+        xaxis={'title': f'Frequency ({xunits})', 'type': 'log'},
+        yaxis={'title': f'Sensitivity (%phi/%param)'}
+    )
+    fig = go.Figure(data=[t1], layout=ly)
+    fig.show()
+
+    omega = 1
+    mn.factor(s=omega*1j)
+    mn.solve()
+    mn.solve_adjoint()
+
+    print( f"Sens at omega: {omega} {np.abs(mn.sensitivities())} {np.abs(mn.elements[1].sens(mn,'l2'))} {np.abs(mn.elements[1].sens(mn,'m'))}")
+    print( f"Sens at omega: {omega} {np.abs(mn.rel_sensitivities())} {np.abs(mn.sensitivities())} {np.abs(mn.elements[1].rel_sens(mn,'l2'))} {np.abs(mn.elements[1].rel_sens(mn,'m'))}")

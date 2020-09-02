@@ -180,6 +180,48 @@ def test_bott_duffin():
 
     run_sparse( mn.G, mn.C, mn.W, mn.d, 7, xunits='rads/sec')
 
+def test_bott_duffin_gyrator():
+
+    mn = ModifiedNodal()
+
+    k = 1
+    # Z(s) = (s**2 + s + 1)/(s**2 + s + 4)
+    z_of_k = 1/2
+
+    zscale = z_of_k
+
+    mn.add( CurrentSourceElement( 0, 3, 1))
+
+    mn.add( GyratorElement( 1, 0, 1, 2, g1=1/zscale, g2=1/zscale))
+
+    mn.add( CapacitanceElement( 3, 1, 1/(zscale*k)))
+
+    mn.add( CapacitanceElement( 3, 4, 3/(zscale*2)))
+    mn.add( InductanceElement( 4, 2, zscale/3))
+    mn.add( ConductanceElement( 3, 2, 2/zscale))
+
+    mn.semantic(3)
+
+    run_sparse( mn.G, mn.C, mn.W, mn.d, 7, xunits='rads/sec')
+
+def test_bott_duffin_gyrator_unit():
+
+    mn = ModifiedNodal()
+
+    k = 1
+
+    mn.add( CurrentSourceElement( 0, 3, 1))
+
+    mn.add( GyratorElement( 0, 1, 2, 1, g1=1, g2=1))
+
+    mn.add( CapacitanceElement( 3, 1, 1/k))
+
+    mn.add( ConductanceElement( 3, 2, 1))
+
+    mn.semantic(3)
+
+    run_sparse( mn.G, mn.C, mn.W, mn.d, 7, xunits='rads/sec')
+
 def test_function_29():
 
     mn = ModifiedNodal()
