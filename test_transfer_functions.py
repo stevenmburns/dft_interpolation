@@ -202,7 +202,7 @@ def test_bott_duffin_gyrator():
 
     mn.semantic(3)
 
-    run_sparse( mn.G, mn.C, mn.W, mn.d, 7, xunits='rads/sec')
+    run_sparse( mn.G, mn.C, mn.W, mn.d, 4, xunits='rads/sec')
 
 def test_bott_duffin_gyrator_unit():
 
@@ -220,7 +220,7 @@ def test_bott_duffin_gyrator_unit():
 
     mn.semantic(3)
 
-    run_sparse( mn.G, mn.C, mn.W, mn.d, 7, xunits='rads/sec')
+    run_sparse( mn.G, mn.C, mn.W, mn.d, 2, xunits='rads/sec')
 
 def test_function_29():
 
