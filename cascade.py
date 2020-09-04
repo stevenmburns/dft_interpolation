@@ -1,4 +1,33 @@
 
+import numpy as np
+
+from plotly.subplots import make_subplots
+import plotly.graph_objects as go
+
+def plot( f, tag=''):
+  xs = 10**(np.arange( -3, 3.005, .01))     
+  t1 = go.Scatter(x=xs,y=f(xs),name="amplitude")
+  ly = go.Layout(
+      title=f'Plot {tag}',
+      xaxis={'title': 'Frequency (rads/sec)', 'type': 'log'},
+      yaxis={'title': tag}
+  )
+  fig = go.Figure(data=[t1], layout=ly)
+  fig.show()
+
+
+def plot_real_part( f):
+  xs = 10**(np.arange( -3, 3.005, .01))     
+  t1 = go.Scatter(x=xs,y=f(xs*1j).real,name="amplitude")
+  ly = go.Layout(
+      title='Real Part Plot',
+      xaxis={'title': f'Frequency (rads/sec)', 'type': 'log'},
+      yaxis={'title': f'Real part'}
+  )
+  fig = go.Figure(data=[t1], layout=ly)
+  fig.show()
+
+
 class Cascade:
     def __init__(self, A, B, C, D):
         self.A = A
