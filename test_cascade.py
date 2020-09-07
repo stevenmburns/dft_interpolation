@@ -621,27 +621,11 @@ def test_K():
                 result.append(sympy.im(r)*sympy.I)
         return result
 
-    def find_pure_real( roots):
-        result = []
-        for r in roots:
-            f = sympy.im(r)
-            if np.abs(f) < fuzz:
-                result.append(sympy.re(r))
-        return result
-        
-    real_num_roots = find_pure_real(num_roots)
-    real_den_roots = find_pure_real(den_roots)
     imag_num_roots = find_pure_imaginary(num_roots)
     imag_den_roots = find_pure_imaginary(den_roots)
 
-
-    print( f"real numer roots: {real_num_roots}")
-    print( f"real denom roots: {real_den_roots}")
     print( f"imaginary numer roots: {imag_num_roots}")
     print( f"imaginary denom roots: {imag_den_roots}")
-
-    assert len(real_num_roots) == 0
-    assert len(real_den_roots) == 0
 
     assert len(imag_num_roots) % 2 == 0
     assert len(imag_den_roots) % 2 == 0
