@@ -519,7 +519,145 @@ import scipy.optimize
 
 from sympy.polys.polytools import div as polydiv, rem as polyrem
 
+def chop_1_over_s( P, Q, s):
+    print( P.subs( { s: 0}))
+    print( Q.subs( { s: 0}))
 
+    factor = s
+
+    Q_prime, Q_prime_rem = polydiv( Q.as_poly(s,domain='RR'), factor)
+    print( f"Q_prime: {Q_prime}")
+    print( f"Q_prime rem: {Q_prime_rem}")
+
+    A = sympy.limit( P/Q_prime, s, 0)
+    print(f"A: {A}")
+
+    P_new = P - A*Q_prime
+    print( f"P_new: {P_new}")
+    P_prime, P_prime_rem = polydiv( P_new.as_poly(s,domain='RR'), factor)
+    print( f"P_prime: {P_prime}")
+    print( f"P_prime rem: {P_prime_rem}")
+
+    return P_prime, Q_prime
+
+def chop_s( P, Q, s):
+    B = sympy.limit( P/(s*Q), s, sympy.oo)
+    print(f"B: {B}")
+
+    P_prime = P - B*s*Q
+    return P_prime, Q
+
+def chop_linear( P, Q, s, s0):
+    print( P.subs( { s: s0}))
+    print( Q.subs( { s: s0}))
+
+    A = sympy.limit( (s-s0)*P/Q, s, s0)
+    print(f"A: {A}")
+
+    factor = s - s0
+
+    Q_prime, Q_prime_rem = polydiv( Q.as_poly(s,domain='RR'), factor)
+    print( f"Q_prime: {Q_prime}")
+    print( f"Q_prime rem: {Q_prime_rem}")
+
+    P_new = P - A*Q_prime
+    print( f"P_new: {P_new}")
+    P_prime, P_prime_rem = polydiv( P_new.as_poly(s,domain='RR'), factor)
+    print( f"P_prime: {P_prime}")
+    print( f"P_prime rem: {P_prime_rem}")
+
+    return P_prime, Q_prime
+
+def chop_quadratic( P, Q, s, w0):
+    print( P.subs( { s: sympy.I*w0}))
+    print( P.subs( { s: -sympy.I*w0}))
+    print( Q.subs( { s: sympy.I*w0}))
+    print( Q.subs( { s: -sympy.I*w0}))
+
+    factor = s**2 + w0**2
+
+    Q_prime, Q_prime_rem = polydiv( Q.as_poly(s,domain='RR'), factor)
+    print( f"Q_prime: {Q_prime}")
+    print( f"Q_prime rem: {Q_prime_rem}")
+
+    Ap = sympy.limit( P, s, sympy.I*w0)
+    Aq = sympy.limit( (s-sympy.I*w0)/Q, s, sympy.I*w0)
+    Aqq = sympy.limit( 1/(Q_prime*(s+sympy.I*w0)), s, sympy.I*w0)
+
+    A = Ap*Aqq
+    print(f"Ap, Aq, Aqq, A: {Ap} {Aq} {Aqq} {A}")
+    Ahat = 2*(s*sympy.re(A)-w0*sympy.im(A))
+    print(f"Ahat: {Ahat}")
+
+
+    P_new = P - Ahat*Q_prime
+    print( f"P_new: {P_new}")
+    P_prime, P_prime_rem = polydiv( P_new.as_poly(s,domain='RR'), factor)
+    print( f"P_prime: {P_prime}")
+    print( f"P_prime rem: {P_prime_rem}")
+
+    return P_prime, Q_prime
+
+def test_chop_chop():
+    s = symbols('s')
+
+    P = (2*s**2 + 2*s +1)
+    Q = s*(s**2+s+1)
+
+    P, Q = chop_1_over_s( P, Q, s)
+    print(f"new_P, new_Q: {P} {Q}")
+
+    P, Q = chop_s( Q, P, s)
+    print(f"new_P, new_Q: {P} {Q}")
+
+    P, Q = chop_s( Q, P, s)
+    print(f"new_P, new_Q: {P} {Q}")
+
+def test_chop_quadratic():
+    s = symbols('s')
+
+    P = s**2+2
+    Q = 2*s**2+3*s+4
+
+    w0 = np.sqrt(2)
+
+    new_P, new_Q = chop_quadratic( Q, P, s, w0)
+    print(f"new_P, new_Q: {new_P} {new_Q}")
+
+def test_chop_linear():
+    s = symbols('s')
+
+    P = (s+1)
+    Q = (s**2+1)*(s+3)
+
+    s0 = -3
+
+    new_P, new_Q = chop_linear( P, Q, s, s0)
+    print(f"new_P, new_Q: {new_P} {new_Q}")
+
+
+def rp( Z, s):
+    w = symbols( "w")
+    real_part = sympy.re(Z.subs({s:sympy.I*w}))
+    return sympy.lambdify( w, real_part, "numpy")
+
+def remove_r( P, Q, s, bracket=None):
+    Z = P/Q
+
+    f = rp(Z, s)
+
+    if False:
+        print( f"real_part: {real_part}")
+        plot( f)
+
+    result = scipy.optimize.minimize_scalar( f, method="brent", bracket=bracket)
+    assert result.success
+
+    Z = Z-result.fun
+
+    P, Q = Z.as_numer_denom()
+    return P, Q, result.x, result.fun
+    
 
 def test_K():
     "Random problem"
@@ -537,27 +675,8 @@ def test_K():
 
     print( radsimp( sympy.expand(Z)))
 
-#    plot_real_part( sympy.lambdify(s, Z, "numpy"))
-
-    real_part = sympy.re(Z.subs({s:sympy.I*w}))
-    print( f"real_part: {real_part}")
-
-#    plot( sympy.lambdify(w, real_part, "numpy"))
-
-    f = sympy.lambdify( w, real_part, "numpy")
-
-    result = scipy.optimize.minimize_scalar( f, method="brent")
-
-    assert result.success
-
-    w0 = result.x
-   
-    print(w0)
-
-    Z = Z-result.fun
-#    plot_real_part( sympy.lambdify(s, Z, "numpy"))
-
-    P, Q = Z.as_numer_denom()
+    P, Q, w0, r = remove_r( P, Q, s)
+    Z = P/Q
 
     target0 = Z.subs({s : sympy.I*w0})/(sympy.I*w0)
     print( f"target: {target0.evalf()}")
@@ -567,7 +686,7 @@ def test_K():
     target1 = radsimp(Z.subs({s : sympy.I*w0})*(sympy.I*w0))
     print( f"target: {target1.evalf()}")
 
-    target1 = sympy.re(target1)
+    target1 = sympy.re(target1).evalf()
 
 
     assert target0 > 0
@@ -630,68 +749,96 @@ def test_K():
     assert len(imag_num_roots) % 2 == 0
     assert len(imag_den_roots) % 2 == 0
 
-    assert len(imag_num_roots) == 2 or len(imag_den_roots) == 2
+    assert len(imag_num_roots) == 2
 
-    if len(imag_den_roots) == 2:
-        assert sympy.im(imag_den_roots[0]) >= sympy.im(imag_den_roots[1])
+    assert sympy.im(imag_num_roots[0]) >= sympy.im(imag_num_roots[1])
 
-        assert np.isclose( np.array(imag_den_roots).astype(np.complex128)[0], 1j*w0)
-        # pole at w0
+    assert np.isclose( np.array(imag_num_roots).astype(np.complex128)[0], 1j*w0)
 
-    if len(imag_num_roots) == 2:
-        assert sympy.im(imag_num_roots[0]) >= sympy.im(imag_num_roots[1])
+    P,Q = eta_den, eta_num
 
-        assert np.isclose( np.array(imag_num_roots).astype(np.complex128)[0], 1j*w0)
-        # pole at w0
-        
+    P,Q = chop_quadratic( P, Q, s, w0)
+    print(f"new_P, new_Q: {P} {Q}")
 
-    return
+    if False:
+        plot( rp( P/Q, s))
 
+    P,Q,w0,r = remove_r( P, Q, s, bracket=[3.5,5])
+    print(f"w0: {w0}")
+    print(f"new_P, new_Q: {P} {Q}")
 
+    if False:
+        plot( rp( P/Q, s))
 
+    P = P.as_poly(s,domain='RR')
+    Q = Q.as_poly(s,domain='RR')
 
-    print("normal")
-    Y0 = eta*Y_k0
-    print( f"Y0: {Y0}")
+    P_roots = P.nroots()
+    print( f"roots for P: {P_roots}")
 
-    Z1 = ratsimp(1/Y0-4)
-    print( f"Z1: {Z1}")
-    C = Cascade.Series(4)
-
-    Y2 = ratsimp(1/Z1)
-    print( f"Y2: {Y2}")
-
-    C = C.hit(Cascade.Shunt(s/10))
-    C = C.hit(Cascade.Shunt(2/(5*s)))
-
-    eta_Y_k0 = cancel(C.terminate_with_admittance(0))
-    print( f"eta_Y_k0: {eta_Y_k0}")
-    assert sympy.Eq( cancel(eta_Y_k0 - Y0), 0)
-
-    print("recip")
-    Y0 = ratsimp(Y_k0/eta)
-    print( f"Y0: {Y0}")
+    Q_roots = Q.nroots()
+    print( f"roots for Q: {Q_roots}")
 
 
-    Y1 = ratsimp(Y0 - 1)
-    print( f"Y1: {Y1}")
-    C = Cascade.Shunt(1)
+    # Switch to make X positive
+    Q, P = P, Q
 
-    Z2 = ratsimp(1/Y1 - 2*s/5 - 8/(5*s))
-    print( f"Z2: {Z2}")
+    X = (P/Q).subs({s : sympy.I*w0})
+    print( f"X: {X.evalf()}")
 
-    C = C.hit(Cascade.Series(2*s/5))
-    C = C.hit(Cascade.Series(8/(5*s)))
-    eta_over_Y_k0 = cancel(1/C.terminate(0))
+    target0 = X/(sympy.I*w0)
+    print( f"target: {target0.evalf()}")
 
-    print( f"eta_over_Y_k0: {eta_over_Y_k0}")
-    assert sympy.Eq( cancel(eta_over_Y_k0 - Y0), 0)
+    target0 = sympy.re(target0).evalf()
 
-    def p(a,b):
-        return a*b/(a+b)
+    assert target0 > 0
 
-    constructed_Y = cancel( p(eta_Y_k0, (k0*Y_k0)/s) + p(eta_over_Y_k0, (Y_k0*s)/k0))
-    print( f"constructed_Y: {constructed_Y}")
+    target1 = X*(sympy.I*w0)
+    print( f"target: {target1.evalf()}")
 
-    assert sympy.Eq( cancel(constructed_Y - Y), 0)
+    target1 = sympy.re(target1).evalf()
+
+    k0_result = scipy.optimize.root_scalar( sympy.lambdify( k, (P/Q).subs({s:k}) - k*target0, "numpy"), method="brentq", bracket=[0,1000])
+
+    assert k0_result.converged
+    k0 = k0_result.root
+
+    print( k0)
+
+    Z_k0 = (P/Q).subs({s:k0})
+    print(k0,Z_k0.evalf())
+
+    num = cancel((k0*P - s*Z_k0*Q))
+    print( f"num factored: {sympy.factor(num)}")
+
+    den = cancel((Q*k0*Z_k0 - s*P))
+    print( f"den factored: {sympy.factor(den)}")
+
+    eta_num,eta_den = num,den
+    print( f"eta_num: {eta_num}")
+    print( f"eta_den: {eta_den}")
+
+    print(eta_num.as_poly(s,domain='RR'))
+    print(eta_den.as_poly(s,domain='RR'))
+
+    factor = sympy.poly( s-k0)
+
+    eta_num, eta_num_rem = polydiv( eta_num.as_poly(s,domain='RR'), factor)
+    eta_den, eta_den_rem = polydiv( eta_den.as_poly(s,domain='RR'), factor)
+    print( f"eta_num: {eta_num}")
+    print( f"eta_num_rem: {eta_num_rem}")
+    print( f"eta_den: {eta_den}")
+    print( f"eta_den_rem: {eta_den_rem}")
+
+    num_roots = eta_num.nroots()
+    print( f"roots for eta_num: {num_roots}")
+
+    den_roots = eta_den.nroots()
+    print( f"roots for eta_den: {den_roots}")
+
+    P, Q = chop_quadratic( eta_den, eta_num, s, w0)
+    print(f"new_P, new_Q: {P} {Q}")
+
+    R = (P/Q).evalf()
+    print(f"Final R: {R}")
 
