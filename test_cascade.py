@@ -659,131 +659,9 @@ def remove_r( P, Q, s, bracket=None):
     return P, Q, result.x, result.fun
     
 
-def test_K():
-    "Random problem"
-    s, k = symbols('s k')
-    w = symbols('w', real=True)
-
-    pprint( "test_I")
-    P = ((s + 1)**2 + 1)*((s + 1)**2 + 9)
-    Q = ((s + 1)**2 + 4)*((s + 1)**2 + 16)
-
-    Z = P/Q
-    pprint( f"P: {P}")
-    pprint( f"Q: {Q}")
-    pprint( f"Z: {Z}")
-
-    print( radsimp( sympy.expand(Z)))
-
-    P, Q, w0, r = remove_r( P, Q, s)
-    Z = P/Q
-
-    target0 = Z.subs({s : sympy.I*w0})/(sympy.I*w0)
-    print( f"target: {target0.evalf()}")
-
-    target0 = sympy.re(target0).evalf()
-
-    target1 = radsimp(Z.subs({s : sympy.I*w0})*(sympy.I*w0))
-    print( f"target: {target1.evalf()}")
-
-    target1 = sympy.re(target1).evalf()
-
-
-    assert target0 > 0
-
-    k0_result = scipy.optimize.root_scalar( sympy.lambdify( k, Z.subs({s:k}) - k*target0, "numpy"), method="brentq", bracket=[0,1000])
-
-    assert k0_result.converged
-    k0 = k0_result.root
-
-    print( k0)
-
-    Z_k0 = Z.subs({s:k0})
-    print(k0,Z_k0.evalf())
-
-    num = cancel((k0*P - s*Z_k0*Q))
-    print( f"num factored: {sympy.factor(num)}")
-
-    den = cancel((Q*k0*Z_k0 - s*P))
-    print( f"den factored: {sympy.factor(den)}")
-
-    eta_num,eta_den = num,den
-    print( f"eta_num: {eta_num}")
-    print( f"eta_den: {eta_den}")
-
-    print(eta_num.as_poly(s,domain='RR'))
-    print(eta_den.as_poly(s,domain='RR'))
-
-    factor = sympy.poly( s-k0)
-
-    eta_num, eta_num_rem = polydiv( eta_num.as_poly(s,domain='RR'), factor)
-    eta_den, eta_den_rem = polydiv( eta_den.as_poly(s,domain='RR'), factor)
-
-    print( f"eta_num: {eta_num}")
-    print( f"eta_den: {eta_den}")
-
-    print( f"eta_num rem: {eta_num_rem}")
-    print( f"eta_den rem: {eta_den_rem}")
-
-    den_roots = eta_den.nroots()
-    print( f"roots for eta_den: {den_roots}")
-
-    num_roots = eta_num.nroots()
-    print( f"roots for eta_num: {num_roots}")
-
-    fuzz = 0.000001
-    def find_pure_imaginary( roots):
-        result = []
-        for r in roots:
-            f = sympy.re(r)
-            if np.abs(f) < fuzz:
-                result.append(sympy.im(r)*sympy.I)
-        return result
-
-    imag_num_roots = find_pure_imaginary(num_roots)
-    imag_den_roots = find_pure_imaginary(den_roots)
-
-    print( f"imaginary numer roots: {imag_num_roots}")
-    print( f"imaginary denom roots: {imag_den_roots}")
-
-    assert len(imag_num_roots) % 2 == 0
-    assert len(imag_den_roots) % 2 == 0
-
-    assert len(imag_num_roots) == 2
-
-    assert sympy.im(imag_num_roots[0]) >= sympy.im(imag_num_roots[1])
-
-    assert np.isclose( np.array(imag_num_roots).astype(np.complex128)[0], 1j*w0)
-
-    P,Q = eta_den, eta_num
-
-    P,Q = chop_quadratic( P, Q, s, w0)
-    print(f"new_P, new_Q: {P} {Q}")
-
-    if False:
-        plot( rp( P/Q, s))
-
-    P,Q,w0,r = remove_r( P, Q, s, bracket=[3.5,5])
-    print(f"w0: {w0}")
-    print(f"new_P, new_Q: {P} {Q}")
-
-    if False:
-        plot( rp( P/Q, s))
-
-    P = P.as_poly(s,domain='RR')
-    Q = Q.as_poly(s,domain='RR')
-
-    P_roots = P.nroots()
-    print( f"roots for P: {P_roots}")
-
-    Q_roots = Q.nroots()
-    print( f"roots for Q: {Q_roots}")
-
-
-    # Switch to make X positive
-    Q, P = P, Q
-
+def bott_duffin( P, Q, s, w0):
     X = (P/Q).subs({s : sympy.I*w0})
+
     print( f"X: {X.evalf()}")
 
     target0 = X/(sympy.I*w0)
@@ -793,50 +671,109 @@ def test_K():
 
     assert target0 > 0
 
-    target1 = X*(sympy.I*w0)
-    print( f"target: {target1.evalf()}")
-
-    target1 = sympy.re(target1).evalf()
+    k = symbols('k')
 
     k0_result = scipy.optimize.root_scalar( sympy.lambdify( k, (P/Q).subs({s:k}) - k*target0, "numpy"), method="brentq", bracket=[0,1000])
 
     assert k0_result.converged
     k0 = k0_result.root
 
-    print( k0)
+    print( f"k0: {k0}")
 
     Z_k0 = (P/Q).subs({s:k0})
-    print(k0,Z_k0.evalf())
+    print( f"Z_k0: {Z_k0.evalf()}")
 
-    num = cancel((k0*P - s*Z_k0*Q))
-    print( f"num factored: {sympy.factor(num)}")
+    num = k0*P - s*Z_k0*Q
+    den = Q*k0*Z_k0 - s*P
 
-    den = cancel((Q*k0*Z_k0 - s*P))
-    print( f"den factored: {sympy.factor(den)}")
-
-    eta_num,eta_den = num,den
-    print( f"eta_num: {eta_num}")
-    print( f"eta_den: {eta_den}")
-
-    print(eta_num.as_poly(s,domain='RR'))
-    print(eta_den.as_poly(s,domain='RR'))
-
+    eta_num,eta_den = num.as_poly(s,domain='RR'),den.as_poly(s,domain='RR')
     factor = sympy.poly( s-k0)
 
-    eta_num, eta_num_rem = polydiv( eta_num.as_poly(s,domain='RR'), factor)
-    eta_den, eta_den_rem = polydiv( eta_den.as_poly(s,domain='RR'), factor)
+    eta_num, eta_num_rem = polydiv( eta_num, factor)
+    eta_den, eta_den_rem = polydiv( eta_den, factor)
+
     print( f"eta_num: {eta_num}")
-    print( f"eta_num_rem: {eta_num_rem}")
     print( f"eta_den: {eta_den}")
-    print( f"eta_den_rem: {eta_den_rem}")
 
-    num_roots = eta_num.nroots()
-    print( f"roots for eta_num: {num_roots}")
+    print( f"eta_num rem: {eta_num_rem}")
+    print( f"eta_den rem: {eta_den_rem}")
 
-    den_roots = eta_den.nroots()
-    print( f"roots for eta_den: {den_roots}")
+    if False:
+        num_roots = eta_num.nroots()
+        den_roots = eta_den.nroots()
+        print( f"roots for eta_num: {num_roots}")
+        print( f"roots for eta_den: {den_roots}")
 
-    P, Q = chop_quadratic( eta_den, eta_num, s, w0)
+        fuzz = 0.000001
+        def find_pure_imaginary( roots):
+            result = []
+            for r in roots:
+                f = sympy.re(r)
+                if np.abs(f) < fuzz:
+                    result.append(sympy.im(r)*sympy.I)
+            return result
+
+        imag_num_roots = find_pure_imaginary(num_roots)
+        imag_den_roots = find_pure_imaginary(den_roots)
+
+        print( f"imaginary numer roots: {imag_num_roots}")
+        print( f"imaginary denom roots: {imag_den_roots}")
+
+        assert len(imag_num_roots) % 2 == 0
+        assert len(imag_den_roots) % 2 == 0
+
+        assert len(imag_num_roots) == 2
+
+        assert np.isclose( np.array(imag_num_roots).astype(np.complex128)[0], 1j*w0) or np.isclose( np.array(imag_num_roots).astype(np.complex128)[1], 1j*w0)
+
+    P,Q = eta_num, eta_den
+
+    return P, Q
+
+def test_K():
+    "Random problem"
+    s = symbols('s')
+
+    print( "test_K")
+    P = ((s + 1)**2 + 1)*((s + 1)**2 + 9)
+    Q = ((s + 1)**2 + 4)*((s + 1)**2 + 16)
+
+    pprint( f"P: {P}")
+    pprint( f"Q: {Q}")
+
+    P, Q, w0, r = remove_r( P, Q, s)
+
+    P,Q = bott_duffin( P, Q, s, w0)
+
+    P,Q = chop_quadratic( Q, P, s, w0)
+    print(f"new_P, new_Q: {P} {Q}")
+
+    if False:
+        plot( rp( P/Q, s))
+
+    P,Q,w0,r = remove_r( P, Q, s, bracket=[3.5,5])
+    print(f"w0: {w0} new_P, new_Q: {P} {Q}")
+
+    if False:
+        plot( rp( P/Q, s))
+
+    if False:
+        P = P.as_poly(s,domain='RR')
+        Q = Q.as_poly(s,domain='RR')
+
+        P_roots = P.nroots()
+        print( f"roots for P: {P_roots}")
+
+        Q_roots = Q.nroots()
+        print( f"roots for Q: {Q_roots}")
+
+
+    # Switch to make X positive
+    P, Q = bott_duffin( Q, P, s, w0)
+    print(f"new_P, new_Q: {P} {Q}")
+
+    # Switch to put j-axis zeros in denominator
+    P, Q = chop_quadratic( Q, P, s, w0)
     print(f"new_P, new_Q: {P} {Q}")
 
     R = (P/Q).evalf()
