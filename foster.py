@@ -154,19 +154,20 @@ class ReactanceFunction:
         results.append( (start, start+2-delta))
         return results
 
+    def domain(self, delta):
+        result = []
+        for start, end in self.intervals(delta):
+            result.append( np.arange( start, end+delta/4, delta))
+        return result
+
     def plot(self):
         delta = 0.001
         xs = []
         ys = []
-        print( self.intervals(delta))
-
-        for start, end in self.intervals(delta):
-            xxs = np.arange( start, end+delta/4, delta)
+        for xxs in self.domain( delta):
             yys = np.imag(self.eval(xxs * 1j))
-            xs.extend( list(xxs))
-            ys.extend( list(yys))
-            xs.append( None)
-            ys.append( None)
+            xs.extend( xxs); xs.append(None)
+            ys.extend( yys); ys.append(None)
 
         t1 = go.Scatter( x=xs, y=ys, name="reactance")
         ly = go.Layout(
@@ -176,6 +177,14 @@ class ReactanceFunction:
         )
         fig = go.Figure(data=[t1], layout=ly)
         fig.show()
+
+    def compare( self, f):
+        #self.plot()
+        delta = 0.001
+        for xxs in self.domain(delta):
+            ff = f.eval(xxs)
+            zz = self.eval(xxs)
+            assert np.allclose( ff, zz)
 
     def residue( self, term):
         assert self.den.has_matched_terms( term)
@@ -208,10 +217,15 @@ class ReactanceFunction:
     def reciprocal(self):
         return ReactanceFunction( self.den, self.num)
 
-    def foster( self):
+    def foster(self):
+        return Foster(self)
+
+
+class Foster:
+    def __init__(self, Z):
         result = []
-        for term in self.den.terms:
-            r = self.residue( term)
+        for term in Z.den.terms:
+            r = Z.residue( term)
             if type(term) == LinearTerm:
                 result.append( ReactanceFunction( Poly( r, []), Poly( 1.0, [term])))
             elif type(term) == QuadraticTerm:
@@ -219,21 +233,14 @@ class ReactanceFunction:
             else:
                 assert False
 
-        if self.has_pole_at_infinity():
-            result.append( ReactanceFunction( Poly( self.num.k/self.den.k, [LinearTerm()]), Poly( 1.0, [])))
+        if Z.has_pole_at_infinity():
+            result.append( ReactanceFunction( Poly( Z.num.k/Z.den.k, [LinearTerm()]), Poly( 1.0, [])))
 
+        self.f = result
+
+    def eval( self, s):
+        result = 0*s
+        for rf in self.f:
+            result += rf.eval(s) 
         return result
 
-def eval_foster( s, f):
-    result = 0*s
-    for rf in f:
-        result += rf.eval(s) 
-    return result
-
-def compare( f, Z):
-    delta = 0.001
-    for start, end in Z.intervals(delta):
-        xxs = np.arange( start, end+delta/4, delta)
-        ff = eval_foster(xxs, f)
-        zz = Z.eval(xxs)
-        assert np.allclose( ff, zz)
