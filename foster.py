@@ -20,10 +20,14 @@ class LinearTerm(Term):
 
     def eval_squared( self, s2):
         assert False
-        return 1
 
     def toTuple( self):
         return (self.c, )
+
+    def add_zeros( self, zeros):
+        assert self.c == 0
+        zeros.append( -self.c)
+        
 
 class QuadraticTerm(Term):
     def __init__(self, w0, c=0):
@@ -44,6 +48,10 @@ class QuadraticTerm(Term):
     def eval_squared( self, s2):
         assert self.c == 0
         return s2 + self.w0**2
+
+    def add_zeros( self, zeros):
+        assert self.c == 0
+        zeros.append( self.w0)
 
 
 class Poly:
@@ -72,12 +80,7 @@ class Poly:
     def zeros( self):
         zeros = []
         for term in self.terms:
-            if type(term) == LinearTerm:
-                assert term.c == 0
-                zeros.append( 0)
-            elif type(term) == QuadraticTerm:
-                assert term.c == 0
-                zeros.append( term.w0)
+            term.add_zeros(zeros)
         zeros.sort()
         return zeros
 
@@ -162,8 +165,7 @@ class ReactanceFunction:
 
     def plot(self):
         delta = 0.001
-        xs = []
-        ys = []
+        xs,ys  = [],[]
         for xxs in self.domain( delta):
             yys = np.imag(self.eval(xxs * 1j))
             xs.extend( xxs); xs.append(None)
@@ -239,8 +241,5 @@ class Foster:
         self.f = result
 
     def eval( self, s):
-        result = 0*s
-        for rf in self.f:
-            result += rf.eval(s) 
-        return result
+        return sum( rf.eval(s) for rf in self.f)
 
